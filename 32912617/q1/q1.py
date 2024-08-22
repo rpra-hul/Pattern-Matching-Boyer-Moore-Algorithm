@@ -76,17 +76,21 @@ def boyer_moore(txt, pat):
     good_suffix = compute_good_suffix(z_suffix)
     matched_prefix = compute_matched_prefix(z_suffix, m)
 
+    print(z_suffix)
+    print(good_suffix)
+    print(matched_prefix) 
+
     # Searching phase
     result = []
     start, stop = -1, -1
     # Cumulative shift value of the pattern with respect to the text
     shift = 0
-    while shift < n - m:
+    while shift <= n - m:
         # Set i to the length of the pattern
         k = m - 1
-        
+        #print(shift)
         # Perform explicit comparison of the pattern and the text from right to left
-        while k <= 0 and pat[k] == txt[k + shift]:
+        while k >= 0 and pat[k] == txt[k + shift]:
             # Skip over the region that is guaranteed to match in the next iteration
             if stop != -1 and (k - 1) == stop:
                 k = start - 1
@@ -100,34 +104,59 @@ def boyer_moore(txt, pat):
             # Append the starting index of the pattern in the text to the results list
             result.append(shift)
             # Shift the pattern to the right by the length of the pattern - matched_prefix[1]
-            shift += m - matched_prefix[1]
+            shift += m - matched_prefix[1] - 1
         else:
             # Determine the shift value based on the good suffix rule
             # If there is no occurence of the suffix in the pattern
             if good_suffix[k+1] == -1:
                 gs_shift = m - matched_prefix[k+1]
+                # Update start and stop values
+                start = 1
+                stop = matched_prefix[k+1]
             else:
                 # If there is an occurence of the suffix in the pattern
+                # Store the bad character in the text
                 bad_char = txt[k + shift]
+                # For each occurence of the suffix in the pattern
+                pos = 0
                 for i in range(len(good_suffix[k+1])):
-                    if good_suffix[k+1][i] >= k:
-                        gs_shift = m - good_suffix[k+1]
+                    # Get the starting index of the good suffix in the pattern
+                    gs_value = good_suffix[k+1][i]
+                    # Get the length of the good suffix
+                    z_suffix_value = z_suffix[gs_value]
+                    pos = i
+
+                    # If the position of the char to compare is to the right of the bad character
+                    if (gs_value - z_suffix_value) >= k:
+                        # Break out of the loop early
+                        
+                        break
+                    
+                    # If the character preceding the good suffix in the pattern is equal to the bad character
+                    if gs_value - z_suffix_value >= 0 and pat[gs_value - z_suffix_value] == bad_char:
+                        # Set the shift value and break out of the loop
+                        gs_shift = m - gs_value - 1
+                        
                         break
                     else:
-                        gs_value = good_suffix[k+1][i]
-                        z_suffix_value = z_suffix[gs_value]
-                        if gs_value - z_suffix_value >= 0 and pat[gs_value - z_suffix_value] == bad_char:
-                            gs_shift = m - gs_value
-                            break
+                        # Update the shift value at every iteration
+                        gs_shift = m - gs_value - 1
+                
+                # Update the start and stop values
+                start = good_suffix[k+1][pos] - m + k + 1
+                stop = good_suffix[k+1][pos]
+            # Update the shift value
+            shift += gs_shift
     
     return result
     
 
 if __name__ == "__main__":
-    txt = "acababacabacaba"
+    # Test 1
+    txt = "acababacabacababcdhostacababacabaacababacaba"
     pat = "acababacaba"
-    print(len(pat))
-    z_suffix = compute_Z_suffix_values(pat)
-    print(z_suffix)
-    print(compute_good_suffix(z_suffix))
-    print(compute_matched_prefix(z_suffix, len(pat)))
+
+    # Test 2: Passed
+    # txt = "abcdabcdabcd"
+    # pat = "abc"
+    print(boyer_moore(txt, pat))
