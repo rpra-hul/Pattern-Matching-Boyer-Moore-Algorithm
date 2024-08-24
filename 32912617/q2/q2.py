@@ -1,60 +1,81 @@
-def compute_Z_suffix_values(pat):
-    
-    n = len(pat)
-    Z_values = [0] * n
+unknown_char = "!"
+alphabet_start = 37 
 
+def compute_Z_suffix_values(pat):
+    m = len(pat)
+    global unknown_char
+    # Initialise an array of Z values of size m
+    Z_values = [0] * m
+    # Reverse the pattern
     reverse_pat = pat[::-1]
-    l, r, i = 0, 0, 0
-    for k in range(1, n):
-        # Base Case: k = 1 or k > r, Perform explicit character comparison
+    #print(reverse_pat)
+    # Initialise left, right indices of the Z-box and an iterative variable, i
+    l, r = -1, -1
+    for k in range(1, m):
+        # Base Case: k = 1 or First Case: k > r, Perform explicit character comparison
         if k > r:
+            unknown_char_occ = 0
             i = k
+            # Initialise a count variable to keep track of the number of matching characters
             count = 0
-            while i < n and reverse_pat[i] == reverse_pat[i-k]:
+            # As long as we dont reach the end of the pattern and the characters match,
+            while i < m and (reverse_pat[i] == reverse_pat[i-k] or reverse_pat[i] == unknown_char or reverse_pat[i - k] == unknown_char):
+
+                if reverse_pat[i - k] == unknown_char:
+                    unknown_char_occ += 1
+        
+                # Increment the count and i
                 i += 1
                 count += 1
+
+            # Store the count in the Z_values array
             Z_values[k] = count
+            # Update the left and right indices of the Z-box
             l = k
-            r = k - 1 + count
-        # Case 2: k <= r, Perform implicit character comparison
+            r = k - 1 + count - unknown_char_occ
+        # Case 2: k <= r, k is within the Z-box
         elif k <= r:
+            # Calculate the remaining characters in the Z-box
             rem = r - k + 1
             k_prime = k - l
+            # Case 2a: Z[k'] < rem, Z'-box is within the remaining Z-box
             if Z_values[k_prime] < rem:
+                # Copy the Z[k'] value to Z[k]
                 Z_values[k] = Z_values[k_prime]
+            # Case 2b: Z[k'] == rem, Perform explicit character comparison
+            # starting from the end of the Z-box
             elif Z_values[k_prime] == rem:
                 i = r
                 count = 0
-                while i < n and reverse_pat[i] == reverse_pat[i-k]:
+                while i < m and (reverse_pat[i] == reverse_pat[i-k] or reverse_pat[i] == unknown_char or reverse_pat[i - k] == unknown_char):
                     i += 1
                     count += 1
                 Z_values[k] = count
                 l = k
                 r = k - 1 + count
+            # Case 2c: Z[k'] > rem, Z'-box extends beyond the remaining Z-box
             else:
-                # Z[k'] > rem
+                # Set Z[k] to the remaining characters in the Z-box
                 Z_values[k] = rem
-
+    # Reverse the Z-values to obtain the Z-suffix array
     Z_suffix = Z_values[::-1]
     return Z_suffix
 
 def compute_good_suffix(Z_suffix):
     n = len(Z_suffix)
+    print(n)
     good_suffix = [-1] * (n+1)
 
     for p in range(n):
+        print(p)
         j = n - Z_suffix[p]
-        if good_suffix[j] == -1:
-            good_suffix[j] = [p]    
-        else:
-            good_suffix[j].append(p)
+        good_suffix[j] = p
 
     return good_suffix
 
 def compute_matched_prefix(Z_suffix, n):
 
     matched_prefix = [0] * (n + 1)
-    #print(n, len(Z_suffix), len(matched_prefix))
 
     j = 0
     for k in range(n-1, 0, -1):
@@ -70,7 +91,7 @@ def compute_matched_prefix(Z_suffix, n):
 def boyer_moore(txt, pat):
     n = len(txt)
     m = len(pat)
-
+    global unknown_char
     # Preprocessing phase
     z_suffix = compute_Z_suffix_values(pat)
     good_suffix = compute_good_suffix(z_suffix)
@@ -90,7 +111,7 @@ def boyer_moore(txt, pat):
         k = m - 1
         #print(shift)
         # Perform explicit comparison of the pattern and the text from right to left
-        while k >= 0 and pat[k] == txt[k + shift]:
+        while k >= 0 and (pat[k] == txt[k + shift] or pat[k] == unknown_char):
             # Skip over the region that is guaranteed to match in the next iteration
             if stop != -1 and (k - 1) == stop:
                 k = start - 1
@@ -104,57 +125,36 @@ def boyer_moore(txt, pat):
             # Append the starting index of the pattern in the text to the results list
             result.append(shift)
             # Shift the pattern to the right by the length of the pattern - matched_prefix[1]
-            shift += m - matched_prefix[1] - 1
+            shift += m - matched_prefix[1] 
         else:
             # Determine the shift value based on the good suffix rule
             # If there is no occurence of the suffix in the pattern
             if good_suffix[k+1] == -1:
-                gs_shift = m - matched_prefix[k+1] 
+                print("here")
+                gs_shift = m - matched_prefix[k+1]
                 # Update start and stop values
                 start = 1
                 stop = matched_prefix[k+1]
             else:
-                # If there is an occurence of the suffix in the pattern
-                # Store the bad character in the text
-                bad_char = txt[k + shift]
-                # For each occurence of the suffix in the pattern
-                pos = 0
-                for i in range(len(good_suffix[k+1])):
-                    # Get the starting index of the good suffix in the pattern
-                    gs_value = good_suffix[k+1][i]
-                    # Get the length of the good suffix
-                    z_suffix_value = z_suffix[gs_value]
-                    pos = i
-
-                    # If the position of the char to compare is to the right of the bad character
-                    if (gs_value - z_suffix_value) >= k:
-                        # Break out of the loop early
-                        break
-                    
-                    # If the character preceding the good suffix in the pattern is equal to the bad character
-                    if gs_value - z_suffix_value >= 0 and pat[gs_value - z_suffix_value] == bad_char:
-                        # Set the shift value and break out of the loop
-                        gs_shift = m - gs_value - 1
-                        break
-                    else:
-                        # Update the shift value at every iteration
-                        gs_shift = m - gs_value - 1
-                
+                gs_shift = m - good_suffix[k+1]
                 # Update the start and stop values
-                start = good_suffix[k+1][pos] - m + k + 1
-                stop = good_suffix[k+1][pos]
+                start = good_suffix[k+1] - m + k + 1
+                stop = good_suffix[k+1]
             # Update the shift value
             shift += gs_shift
     
     return result
-    
 
 if __name__ == "__main__":
-    # Test 1
-    txt = "acababacabacababcdhostaabdAacababacabaacababacaba"
-    pat = "acababacaba"
+    # Test case 1
+    txt = "ddedadudadededududumadgaergadbvadgaegsdg"
+    pat = "de!!dud"
 
-    #Test 2: Passed
-    # txt = "abcdabcdabcsdfsdfsefsfasdfasd"
-    # pat = "abc"
     print(boyer_moore(txt, pat))
+
+    # Z_suffix = compute_Z_suffix_values(pat)
+    # print(Z_suffix)
+    # good_suffix = compute_good_suffix(Z_suffix)
+    # print(good_suffix)
+    # matched_prefix = compute_matched_prefix(Z_suffix, len(pat))
+    # print(matched_prefix)
