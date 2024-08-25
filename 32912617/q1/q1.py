@@ -88,7 +88,7 @@ def boyer_moore(txt, pat):
     while shift <= n - m:
         # Set i to the length of the pattern
         k = m - 1
-        #print(shift)
+        print(shift)
         # Perform explicit comparison of the pattern and the text from right to left
         while k >= 0 and pat[k] == txt[k + shift]:
             # Skip over the region that is guaranteed to match in the next iteration
@@ -104,7 +104,7 @@ def boyer_moore(txt, pat):
             # Append the starting index of the pattern in the text to the results list
             result.append(shift)
             # Shift the pattern to the right by the length of the pattern - matched_prefix[1]
-            shift += m - matched_prefix[1] - 1
+            shift += m - matched_prefix[1]
         else:
             # Determine the shift value based on the good suffix rule
             # If there is no occurence of the suffix in the pattern
@@ -151,10 +151,14 @@ def boyer_moore(txt, pat):
 
 if __name__ == "__main__":
     # Test 1
-    txt = "acababacabacababcdhostaabdAacababacabaacababacaba"
-    pat = "acababacaba"
+    # txt = "acababacabacababcdhostaabdAacababacabaacababacaba"
+    # pat = "acababacaba"
 
     #Test 2: Passed
-    # txt = "abcdabcdabcsdfsdfsefsfasdfasd"
-    # pat = "abc"
+    # txt = "abcabcabcabc"
+    # pat = "abcabc"
+
+    # Test 3
+    txt = "abacababc"
+    pat = "acab"
     print(boyer_moore(txt, pat))
